@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindSpace - Anonymous Sanctuary & Mindful Chat</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+</head>
+<body>
+    <!-- Ambient Background Glows -->
+    <div class="bg-glow glow-1"></div>
+    <div class="bg-glow glow-2"></div>
+
+    <!-- Header Navigation -->
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <i class="fa-solid fa-cloud-moon logo-icon"></i>
+                <span class="logo-text">Mind<span>Space</span></span>
+            </div>
+            
+            <nav class="nav-links">
+                <button class="nav-btn active" id="navPublicTab"><i class="fa-solid fa-earth-americas"></i> Public Feed</button>
+                <button class="nav-btn" id="navPrivateTab"><i class="fa-solid fa-lock"></i> Private Sector</button>
+                <button class="nav-btn" id="openFeedbackBtn"><i class="fa-solid fa-comment-heart"></i> Feedback</button>
+                <button class="nav-btn mindbot-nav-btn" id="openMindBotNavBtn"><i class="fa-solid fa-robot"></i> MindBot AI</button>
+            </nav>
+
+            <div class="user-auth-area">
+                <div id="loggedOutState">
+                    <button class="btn btn-secondary" id="openLoginBtn"><i class="fa-solid fa-right-to-bracket"></i> Login</button>
+                    <button class="btn btn-primary" id="openRegisterBtn">Join Anonymously</button>
+                </div>
+                <div id="loggedInState" class="hidden">
+                    <span class="user-badge" id="userAliasBadge"><i class="fa-solid fa-user-shield"></i> <span id="userAliasText"></span></span>
+                    <button class="btn btn-outline" id="logoutBtn"><i class="fa-solid fa-power-off"></i></button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-content">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-badge"><i class="fa-solid fa-shield-cat"></i> 100% Anonymous & Safe Space</div>
+            <h1 class="hero-title">Share Your Thoughts Without Fear</h1>
+            <p class="hero-subtitle">Express your feelings, vent anonymously, or seek support in a caring community guarded by intelligent AI content safety.</p>
+            
+            <div class="hero-actions">
+                <button class="btn btn-primary btn-lg" id="openPostModalBtn"><i class="fa-solid fa-feather-pointed"></i> Share Anonymous Thought</button>
+                <button class="btn btn-glass btn-lg" id="heroMindBotBtn"><i class="fa-solid fa-wand-magic-sparkles"></i> Talk to MindBot AI</button>
+            </div>
+        </section>
+
+        <!-- Feed Control Toolbar -->
+        <section class="feed-controls">
+            <div class="feed-tabs">
+                <button class="tab-btn active" id="tabPublicBtn">
+                    <i class="fa-solid fa-globe"></i> Public Feed <span class="tab-badge" id="publicCountBadge">Public</span>
+                </button>
+                <button class="tab-btn" id="tabPrivateBtn">
+                    <i class="fa-solid fa-user-lock"></i> Private Sector <span class="tab-badge private-badge">Login Required</span>
+                </button>
+            </div>
+
+            <!-- Mood Filter Chips -->
+            <div class="mood-filters" id="moodFilters">
+                <button class="chip active" data-mood="All">All Thoughts</button>
+                <button class="chip" data-mood="Venting">🌊 Venting</button>
+                <button class="chip" data-mood="NightThoughts">🌙 Night Thoughts</button>
+                <button class="chip" data-mood="SmallWins">✨ Small Wins</button>
+                <button class="chip" data-mood="Advice">💡 Seeking Advice</button>
+                <button class="chip" data-mood="Gratitude">💖 Gratitude</button>
+            </div>
+        </section>
+
+        <!-- Posts Feed Container -->
+        <section class="feed-section">
+            <div class="private-gate-banner hidden" id="privateGateBanner">
+                <div class="gate-card">
+                    <i class="fa-solid fa-key-skeleton gate-icon"></i>
+                    <h2>Private Sector Locked</h2>
+                    <p>The Private Sector is an exclusive, extra-secure space for registered anonymous members. Login or create a free anonymous profile to view and share confidential thoughts.</p>
+                    <button class="btn btn-primary" id="gateLoginBtn">Login / Register to Access</button>
+                </div>
+            </div>
+
+            <div class="posts-grid" id="postsContainer">
+                <div class="loading-spinner">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> Loading thoughts...
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Create Post Modal -->
+    <div class="modal-backdrop hidden" id="postModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-pen-to-square"></i> Share an Anonymous Thought</h3>
+                <button class="modal-close" id="closePostModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="postContent">Your Feelings / Thoughts</label>
+                    <textarea id="postContent" rows="5" placeholder="Write what's on your mind... MindSpace automatically checks for safety and provides support if needed."></textarea>
+                    
+                    <div class="safety-indicator" id="safetyIndicator">
+                        <i class="fa-solid fa-shield-check"></i> Live Safety Checker: <span id="safetyStatusText">Clean</span>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Mood Tag</label>
+                        <select id="postMoodTag">
+                            <option value="Venting">🌊 Venting</option>
+                            <option value="NightThoughts">🌙 Night Thoughts</option>
+                            <option value="SmallWins">✨ Small Wins</option>
+                            <option value="Advice">💡 Seeking Advice</option>
+                            <option value="Gratitude">💖 Gratitude</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Feed</label>
+                        <select id="postFeedType">
+                            <option value="public">🌐 Public Feed</option>
+                            <option value="private">🔒 Private Sector</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Anonymous Handle</label>
+                    <input type="text" id="postAlias" placeholder="Anonymous Friend (or your logged in handle)" readonly>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelPostBtn">
+                    Cancel
+                </button>
+
+
+                <button class="btn btn-primary" id="submitPostBtn">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    Post Anonymously
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Crisis & Mental Support Modal Overlay -->
+    <div class="modal-backdrop crisis-backdrop hidden" id="crisisModal">
+        <div class="modal-card crisis-card">
+            <div class="crisis-header">
+                <div class="crisis-heart-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+                <h2 id="crisisTitle">You Are Not Alone 💙</h2>
+                <p id="crisisDescription">We noticed your message contained words expressing deep pain or crisis. Your life matters deeply. Please let us connect you to immediate support.</p>
+            </div>
+
+            <div class="crisis-body">
+                <!-- Breathing Exercise Widget -->
+                <div class="breathing-container">
+                    <h4>Calming Breath Guide</h4>
+                    <div class="breathing-circle" id="breathingCircle">
+                        <span id="breathingText">Breathe In</span>
+                    </div>
+                </div>
+
+                <!-- Helplines List -->
+                <div class="helplines-grid" id="helplinesContainer">
+                    <!-- Dynamic Helpline Cards -->
+                </div>
+            </div>
+
+            <div class="crisis-footer">
+                <button class="btn btn-glass" id="closeCrisisBtn">I Understand</button>
+                <button class="btn btn-primary btn-pulse" id="crisisMindBotBtn"><i class="fa-solid fa-robot"></i> Talk with MindBot AI Now</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal (Login / Register) -->
+    <div class="modal-backdrop hidden" id="authModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="authModalTitle"><i class="fa-solid fa-user-shield"></i> Anonymous Account</h3>
+                <button class="modal-close" id="closeAuthModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="auth-toggle">
+                    <button class="auth-tab active" id="authTabLogin">Login</button>
+                    <button class="auth-tab" id="authTabRegister">Register</button>
+                </div>
+
+                <form id="authForm">
+                    <div class="form-group">
+                        <label for="authAlias">Anonymous Alias / Handle</label>
+                        <input type="text" id="authAlias" placeholder="e.g. StarGazer, QuietOwl" required minlength="3">
+                    </div>
+                    <div class="form-group">
+                        <label for="authPassword">Password</label>
+                        <input type="password" id="authPassword" placeholder="••••••••" required minlength="4">
+                    </div>
+                    <div class="auth-error hidden" id="authErrorMsg"></div>
+                    <button type="submit" class="btn btn-primary btn-block" id="authSubmitBtn">Login</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div class="modal-backdrop hidden" id="feedbackModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-comment-dots"></i> Platform Feedback</h3>
+                <button class="modal-close" id="closeFeedbackModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>How has your experience been with MindSpace? We value your anonymous feedback!</p>
+                <div class="rating-stars" id="starRating">
+                    <i class="fa-solid fa-star star active" data-rating="1"></i>
+                    <i class="fa-solid fa-star star active" data-rating="2"></i>
+                    <i class="fa-solid fa-star star active" data-rating="3"></i>
+                    <i class="fa-solid fa-star star active" data-rating="4"></i>
+                    <i class="fa-solid fa-star star active" data-rating="5"></i>
+                </div>
+
+                <div class="form-group">
+                    <label for="feedbackMsg">Your Feedback / Suggestions</label>
+                    <textarea id="feedbackMsg" rows="4" placeholder="Tell us what you love or how we can improve MindSpace..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelFeedbackBtn">Cancel</button>
+                <button class="btn btn-primary" id="submitFeedbackBtn">Submit Feedback</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating MindBot AI Assistant Drawer -->
+    <div class="mindbot-floating-trigger" id="mindbotTrigger">
+        <div class="trigger-badge"><i class="fa-solid fa-robot"></i> MindBot AI</div>
+    </div>
+
+    <div class="mindbot-drawer hidden" id="mindbotDrawer">
+        <div class="mindbot-header">
+            <div class="mindbot-title">
+                <i class="fa-solid fa-robot bot-icon"></i>
+                <div>
+                    <h4>MindBot Companion</h4>
+                    <span class="status-online"><i class="fa-solid fa-circle"></i> Always Here to Support</span>
+                </div>
+            </div>
+            <button class="mindbot-close" id="closeMindBotBtn">&times;</button>
+        </div>
+
+        <div class="mindbot-messages" id="mindbotMessages">
+            <div class="chat-bubble bot-bubble">
+                Hello! I am MindBot, your 24/7 empathetic companion. How are you feeling right now? You can tell me anything. 💙
+            </div>
+        </div>
+
+        <div class="mindbot-input-area">
+            <input type="text" id="mindbotInput" placeholder="Message MindBot...">
+            <button class="btn btn-primary btn-icon" id="sendMindBotMsgBtn"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
