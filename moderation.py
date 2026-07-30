@@ -8,7 +8,7 @@ PROFANITY_WORDS = set([
     "fuck", "fucker", "fucking", "shit", "bitch", "bastard",
     "asshole", "cunt", "dick", "pussy", "cock",
     "motherfucker", "whore", "slut", "bullshit", "douche",
-    "nigger", "faggot", "wanker","suck","dih","dihh","nigga","negro","puh","ahole","a-hole","dwarf",
+    "nigger", "faggot", "wanker","suck","dih","dihh","nigga","negro","puh","ahole","a-hole","dwarf","milf","gilf",
 
     "chutiya", "bhenchod", "madarchod", "gandu", "bhosdike",
     "harami", "kutta", "kamina", "lauda", "lode",
