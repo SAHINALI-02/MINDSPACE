@@ -103,6 +103,17 @@ class FeedbackRequest(BaseModel):
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
+def get_user_from_token(authorization: Optional[str]) -> Optional[str]:
+    if not authorization or not authorization.startswith("Bearer token_"):
+        return None
+    alias = authorization.replace("Bearer token_", "")
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT alias FROM users WHERE alias = ?", (alias,))
+    row = cursor.fetchone()
+    conn.close()
+    return row["alias"] if row else None
+
 # API Routes
 
 @app.post("/api/auth/register")
@@ -199,10 +210,10 @@ def create_public_post(req: PostCreate):
 
 @app.get("/api/posts/private")
 def get_private_posts(authorization: Optional[str] = Header(None)):
-    if not authorization or not authorization.startswith("Bearer token_"):
+    alias = get_user_from_token(authorization)
+    if not alias:
         raise HTTPException(status_code=401, detail="Access denied. Please login to access Private Sector.")
-        
-    alias = authorization.replace("Bearer token_", "")
+
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM posts WHERE feed_type = 'private' ORDER BY id DESC LIMIT 50")
@@ -219,10 +230,9 @@ def get_private_posts(authorization: Optional[str] = Header(None)):
 
 @app.post("/api/posts/private")
 def create_private_post(req: PostCreate, authorization: Optional[str] = Header(None)):
-    if not authorization or not authorization.startswith("Bearer token_"):
+    alias = get_user_from_token(authorization)
+    if not alias:
         raise HTTPException(status_code=401, detail="Please login to post in the Private Sector.")
-        
-    alias = authorization.replace("Bearer token_", "")
     
     # Moderation check
     analysis = analyze_text(req.content)

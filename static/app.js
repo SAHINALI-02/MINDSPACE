@@ -22,6 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const authPasswordInput = document.getElementById('authPassword');
     const authErrorMsg = document.getElementById('authErrorMsg');
     const authSubmitBtn = document.getElementById('authSubmitBtn');
+    const openSettingsBtn = document.getElementById('openSettingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+    const settingsLogoutBtn = document.getElementById('settingsLogoutBtn');
+    const themeCards = document.querySelectorAll('.theme-card');
     
     const tabPublicBtn = document.getElementById('tabPublicBtn');
     const tabPrivateBtn = document.getElementById('tabPrivateBtn');
@@ -60,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const starRating = document.getElementById('starRating');
 
     updateAuthUI();
+    loadThemeFromStorage();
     loadFeed();
 
     tabPublicBtn.addEventListener('click', () => switchFeed('public'));
@@ -70,7 +76,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('openLoginBtn').addEventListener('click', () => openAuthModal('login'));
     document.getElementById('openRegisterBtn').addEventListener('click', () => openAuthModal('register'));
     document.getElementById('gateLoginBtn').addEventListener('click', () => openAuthModal('login'));
-    document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+    openSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+    closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+    settingsLogoutBtn.addEventListener('click', () => {
+        settingsModal.classList.add('hidden');
+        handleLogout();
+    });
+
+    themeCards.forEach(card => {
+        card.addEventListener('click', () => selectTheme(card.dataset.theme));
+    });
 
     document.getElementById('authTabLogin').addEventListener('click', (e) => {
         e.preventDefault();
@@ -298,6 +313,38 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.currentFeed === 'private') {
             switchFeed('public');
         }
+    }
+
+    function loadThemeFromStorage() {
+        const savedTheme = localStorage.getItem('mindspace_theme') || 'default';
+        applyTheme(savedTheme);
+    }
+
+    function applyTheme(theme) {
+        state.selectedTheme = theme;
+        localStorage.setItem('mindspace_theme', theme);
+        document.body.dataset.theme = theme;
+        updateThemeSelectionUI();
+    }
+
+    function themeDisplayName(theme) {
+        return {
+            default: 'Midnight Bloom',
+            dawn: 'Warm Dawn',
+            oasis: 'Calm Oasis',
+            ember: 'Amber Ember'
+        }[theme] || 'Custom Theme';
+    }
+
+    function updateThemeSelectionUI() {
+        themeCards.forEach(card => {
+            card.classList.toggle('active', card.dataset.theme === state.selectedTheme);
+        });
+    }
+
+    function selectTheme(theme) {
+        applyTheme(theme);
+        showToast(`${themeDisplayName(theme)} theme activated.`, 'success');
     }
 
     function updateAuthUI() {
