@@ -13,7 +13,7 @@ PROFANITY_WORDS = set([
     "chutiya", "bhenchod", "madarchod", "gandu", "bhosdike",
     "harami", "kutta", "kamina", "lauda", "lode",
     "gaand", "chut", "saala", "bakchod", "mc", "bc",
-    "gaandu", "saale",
+    "gaandu", "saale","die","suicide","1"
 
     "mierda", "puta", "pendejo", "cabron", "maricon",
     "joder", "coño",

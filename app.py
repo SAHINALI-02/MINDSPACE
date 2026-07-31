@@ -7,7 +7,7 @@ from typing import Optional, List
 from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 from moderation import analyze_text
 from chatbot import generate_reply
@@ -25,17 +25,39 @@ def get_db():
 def init_db():
     conn = get_db()
     cursor = conn.cursor()
-    
-    # Users Table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        alias TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        created_at TEXT NOT NULL
-    )
-    """)
-    
+
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+    users_table_exists = cursor.fetchone() is not None
+
+    if users_table_exists:
+        cursor.execute("PRAGMA table_info(users)")
+        user_columns = [row['name'] for row in cursor.fetchall()]
+        if 'email' not in user_columns or 'name' not in user_columns or 'alias' in user_columns:
+            cursor.execute("ALTER TABLE users RENAME TO users_old")
+            cursor.execute("""
+            CREATE TABLE users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """)
+            cursor.execute(
+                "INSERT INTO users (name, email, password_hash, created_at) SELECT COALESCE(name, alias, 'Anonymous'), email, password_hash, created_at FROM users_old WHERE email IS NOT NULL"
+            )
+            cursor.execute("DROP TABLE users_old")
+    else:
+        cursor.execute("""
+        CREATE TABLE users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """)
+
     # Posts Table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS posts (
@@ -83,8 +105,13 @@ init_db()
 app = FastAPI(title="MindSpace Anonymous Chat API")
 
 # Pydantic Schemas
-class AuthRequest(BaseModel):
-    alias: str
+class RegisterRequest(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+
+class LoginRequest(BaseModel):
+    email: EmailStr
     password: str
 
 class PostCreate(BaseModel):
@@ -106,46 +133,63 @@ def hash_password(password: str) -> str:
 def get_user_from_token(authorization: Optional[str]) -> Optional[str]:
     if not authorization or not authorization.startswith("Bearer token_"):
         return None
-    alias = authorization.replace("Bearer token_", "")
+    email = authorization.replace("Bearer token_", "").strip().lower()
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT alias FROM users WHERE alias = ?", (alias,))
+    cursor.execute("SELECT name FROM users WHERE email = ?", (email,))
     row = cursor.fetchone()
     conn.close()
-    return row["alias"] if row else None
+    return row["name"] if row else None
 
 # API Routes
 
 @app.post("/api/auth/register")
-def register(req: AuthRequest):
-    if len(req.alias.strip()) < 3 or len(req.password) < 4:
-        raise HTTPException(status_code=400, detail="Alias must be at least 3 chars and password 4 chars.")
-        
+def register(req: RegisterRequest):
+    name = req.name.strip()
+    email = req.email.strip().lower()
+    password = req.password
+
+    if len(name) < 3 or len(password) < 4:
+        raise HTTPException(status_code=400, detail="Name must be at least 3 chars and password at least 4 chars.")
+
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("INSERT INTO users (alias, password_hash, created_at) VALUES (?, ?, ?)",
-                       (req.alias.strip(), hash_password(req.password), datetime.now().isoformat()))
+        cursor.execute(
+            "INSERT INTO users (name, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
+            (name, email, hash_password(password), datetime.now().isoformat())
+        )
         conn.commit()
     except sqlite3.IntegrityError:
         conn.close()
-        raise HTTPException(status_code=400, detail="This anonymous alias is already taken. Try another!")
-        
+        raise HTTPException(status_code=400, detail="This email is already registered. Please login or use another email.")
+
     conn.close()
-    return {"status": "success", "alias": req.alias.strip(), "token": f"token_{req.alias.strip()}"}
+    return {
+        "status": "success",
+        "name": name,
+        "email": email,
+        "token": f"token_{email}"
+    }
 
 @app.post("/api/auth/login")
-def login(req: AuthRequest):
+def login(req: LoginRequest):
+    email = req.email.strip().lower()
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT password_hash FROM users WHERE alias = ?", (req.alias.strip(),))
+    cursor.execute("SELECT password_hash, name FROM users WHERE email = ?", (email,))
     row = cursor.fetchone()
     conn.close()
-    
+
     if not row or row["password_hash"] != hash_password(req.password):
-        raise HTTPException(status_code=401, detail="Invalid alias or password.")
-        
-    return {"status": "success", "alias": req.alias.strip(), "token": f"token_{req.alias.strip()}"}
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+
+    return {
+        "status": "success",
+        "name": row["name"],
+        "email": email,
+        "token": f"token_{email}"
+    }
 
 @app.get("/api/posts/public")
 def get_public_posts():

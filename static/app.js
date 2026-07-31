@@ -4,7 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentFeed: 'public',
         activeMood: 'All',
         token: localStorage.getItem('mindspace_token') || null,
-        alias: localStorage.getItem('mindspace_alias') || null,
+        name: localStorage.getItem('mindspace_name') || null,
+        email: localStorage.getItem('mindspace_email') || null,
         posts: [],
         rating: 5
     };
@@ -18,10 +19,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const userAliasText = document.getElementById('userAliasText');
     const authModal = document.getElementById('authModal');
     const authForm = document.getElementById('authForm');
-    const authAliasInput = document.getElementById('authAlias');
+    const authNameInput = document.getElementById('authName');
+    const authEmailInput = document.getElementById('authEmail');
     const authPasswordInput = document.getElementById('authPassword');
     const authErrorMsg = document.getElementById('authErrorMsg');
     const authSubmitBtn = document.getElementById('authSubmitBtn');
+    const authNameGroup = document.querySelector('.auth-name-group');
     const openSettingsBtn = document.getElementById('openSettingsBtn');
     const settingsModal = document.getElementById('settingsModal');
     const closeSettingsBtn = document.getElementById('closeSettingsBtn');
@@ -111,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
         postContent.value = '';
         safetyIndicator.className = 'safety-indicator';
         safetyStatusText.textContent = 'Clean';
-        postAlias.value = state.alias || 'Anonymous Friend';
+        postAlias.value = state.name || 'Anonymous Friend';
         postFeedType.value = state.currentFeed;
         postModal.classList.remove('hidden');
     });
@@ -189,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     content: content,
                     mood_tag: mood_tag,
-                    alias: state.alias || 'Anonymous Friend'
+                    alias: state.name || 'Anonymous Friend'
                 })
             });
 
@@ -245,6 +248,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function openAuthModal(mode) {
         setAuthTab(mode);
         authErrorMsg.classList.add('hidden');
+        authNameInput.value = '';
+        authEmailInput.value = '';
+        authPasswordInput.value = '';
         authModal.classList.remove('hidden');
     }
 
@@ -255,27 +261,34 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('authTabRegister').classList.remove('active');
             document.getElementById('authModalTitle').innerHTML = '<i class="fa-solid fa-user-shield"></i> Anonymous Login';
             authSubmitBtn.textContent = 'Login';
+            authNameGroup.classList.add('hidden');
         } else {
             document.getElementById('authTabRegister').classList.add('active');
             document.getElementById('authTabLogin').classList.remove('active');
             document.getElementById('authModalTitle').innerHTML = '<i class="fa-solid fa-user-plus"></i> Join Anonymously';
             authSubmitBtn.textContent = 'Create Profile';
+            authNameGroup.classList.remove('hidden');
         }
     }
 
     authForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const alias = authAliasInput.value.trim();
+        const name = authNameInput.value.trim();
+        const email = authEmailInput.value.trim();
         const password = authPasswordInput.value;
 
         const endpoint = currentAuthMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+        const body = currentAuthMode === 'register'
+            ? { name, email, password }
+            : { email, password };
+
         authSubmitBtn.disabled = true;
 
         try {
             const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ alias, password })
+                body: JSON.stringify(body)
             });
             const data = await res.json();
 
@@ -286,11 +299,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             state.token = data.token;
-            state.alias = data.alias;
+            state.name = data.name;
+            state.email = data.email;
             localStorage.setItem('mindspace_token', data.token);
-            localStorage.setItem('mindspace_alias', data.alias);
+            localStorage.setItem('mindspace_name', data.name);
+            localStorage.setItem('mindspace_email', data.email);
 
-            showToast(`Welcome back, ${data.alias}!`, 'success');
+            showToast(`Welcome back, ${data.name}!`, 'success');
             authModal.classList.add('hidden');
             updateAuthUI();
             loadFeed();
@@ -305,9 +320,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleLogout() {
         state.token = null;
-        state.alias = null;
+        state.name = null;
+        state.email = null;
         localStorage.removeItem('mindspace_token');
-        localStorage.removeItem('mindspace_alias');
+        localStorage.removeItem('mindspace_name');
+        localStorage.removeItem('mindspace_email');
         updateAuthUI();
         showToast('Logged out of anonymous session.', 'success');
         if (state.currentFeed === 'private') {
@@ -348,10 +365,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateAuthUI() {
-        if (state.token && state.alias) {
+        if (state.token && state.name) {
             loggedOutState.classList.add('hidden');
             loggedInState.classList.remove('hidden');
-            userAliasText.textContent = state.alias;
+            userAliasText.textContent = state.name;
         } else {
             loggedOutState.classList.remove('hidden');
             loggedInState.classList.add('hidden');
@@ -585,7 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     rating: state.rating,
                     message: message,
-                    alias: state.alias || 'Anonymous Guest'
+                    alias: state.name || 'Anonymous Guest'
                 })
             });
             const data = await res.json();
